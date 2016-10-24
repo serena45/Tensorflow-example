@@ -1,0 +1,120 @@
+import tensorflow as tf
+import numpy as np
+import pandas as pd 
+import matplotlib.pyplot as plt 
+from matplotlib.colors import ListedColormap
+# initiate the w
+def init_weights(shape):
+    return tf.Variable(tf.random_normal(shape, stddev=0.01))
+
+def model(X, weights, biases): 
+    global h	
+    h = tf.matmul(X, weights)+biases
+    f=tf.sign(h)
+    return f
+
+def plot_decision_regions(x,y,resolution=0.02):
+    # set the color and markers
+    markers = ('s','x','o','^','v')
+    colors = ('red', 'blue', 'lightgreen', 'gray', 'cyan')
+    cmap = ListedColormap(colors[:len(np.unique(y))])
+    # plot the decision surface
+    x1_min, x1_max = x[:, 0].min() - 1, x[:, 0].max() + 1
+    x2_min, x2_max = x[:, 1].min() - 1, x[:, 1].max() + 1
+    xx1, xx2 = np.meshgrid(np.arange(x1_min, x1_max, resolution),
+                         np.arange(x2_min, x2_max, resolution))
+    #Z = classifier.predict(np.array([xx1.ravel(), xx2.ravel()]).T)
+    Z = sess.run(py_x, feed_dict={X: np.array([xx1.ravel(), xx2.ravel()]).T})
+    print Z
+    print  biases,weights
+    Z = np.where(Z>=0.5, 1, -1)
+    print Z.shape,Z
+    Z = Z.reshape(xx1.shape)
+
+    #plt.contourf(x[:,0], x[:,1], y, alpha=0.4, cmap=cmap)
+    plt.contourf(xx1, xx2, Z, alpha=0.4, cmap=cmap)
+    plt.xlim(xx1.min(), xx1.max())
+    plt.ylim(xx2.min(), xx2.max())
+    for idx, cl in enumerate(np.unique(y)):
+        plt.scatter(x=x[y == cl, 0], y=x[y == cl, 1], alpha=0.8, c=cmap(idx), marker=markers[idx], label=cl)
+
+
+
+if __name__ == "__main__":
+    #==============================================================================
+    # loading the dataset
+    #==============================================================================
+    df = pd.read_csv("/home/dli/iris.data",header=None);
+    #df = df.iloc[np.random.permutation(len(df))]
+    
+    df1 =  df.iloc[:, range(4)]
+    mean = df1.describe().iloc[1]
+    std = df.describe().iloc[2]
+    df1 = (df1-mean)/std
+    
+    
+    #==============================================================================
+    # here is create the training data: x and y
+    #==============================================================================
+    x=df1.iloc[1:81,[0,2]].values
+    y=df.iloc[1:81,4].values
+    y=np.where(y=="Iris-setosa",-1,1)
+    plt.scatter(x[:40,0],x[:40,1],color='red',marker='o',label='setosa')
+    plt.scatter(x[40:80,0],x[40:80,1],color='blue',marker='x',label='versicolor')
+    plt.xlabel('petal len')
+    plt.ylabel('sepal len')
+    plt.legend(loc='upper left')
+    plt.show()
+    
+    #==============================================================================
+    # here is create the test data: teX and texY
+    #==============================================================================
+    teX=df1.iloc[81:101,[0,2]].values
+    teY=df.iloc[81:101,4].values
+    teY=np.where(teY=="Iris-setosa",-1,1)
+    
+    
+    
+    # define the placeholder
+    X = tf.placeholder(tf.float32)
+    Y = tf.placeholder(tf.float32)
+    
+    
+    # initiate the parm
+    weights = init_weights([2, 1]) 
+    biases = tf.Variable(tf.zeros([1, 1])+0.1)
+    
+    # define the model
+    py_x = model(X, weights, biases)
+    
+    
+    
+    # the error between prediction and real data loss
+    cross = tf.add(tf.reduce_sum(tf.mul(tf.pow(Y-py_x, 2), tf.abs(h))), tf.matmul(tf.transpose(weights), weights))
+    #cross = tf.reduce_mean(-tf.reduce_sum(Y * tf.log(h),reduction_indices=[1])) #+tf.matmul(tf.transpose(weights), weights)
+    
+    # train_step
+    train_step = tf.train.GradientDescentOptimizer(0.03).minimize(cross)
+    
+    # important step
+    sess = tf.Session()
+    sess.run(tf.initialize_all_variables())
+    
+    
+    for i in range(1000):
+        sess.run(train_step, feed_dict={X:x, Y: y})   
+    
+
+    #for i in range(20): 
+    #    print sess.run(compute_accuracy(
+    #            teX, teY))
+    r1 = sess.run(py_x, feed_dict={X: teX})[:,0]
+    #r1 = np.where(r1>=0.5, 1, -1)[:,0]
+    print float(len(r1[r1==teY]))/len(r1)
+    plot_decision_regions(x, y)
+    plt.xlabel('sepal length [cm]')
+    plt.ylabel('petal length [cm]')
+    plt.legend(loc='upper left')
+    plt.show() 
+
+     
